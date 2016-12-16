@@ -46,7 +46,7 @@ La llibreria [amoniak](https://github.com/Som-Energia/amoniak "amoniak") utilitz
 
 Les dades vinculades als contractes i mesures estan gestionades i emmagatzemades per l'ERP (exceptuant horàries), i els resultats de l'analítica estan emmagatzemades pel MongoDB.
 
-***La gestió de la pujada de lectures horàries no es realitza a través de l'API, ni amoniak, si no que es du a terme directament a través de SFTP.***
+_La gestió de la pujada de lectures horàries no es realitza a través de l'API, ni amoniak, si no que es du a terme directament a través de SFTP._
 
 ### Cues
 
