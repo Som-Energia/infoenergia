@@ -1,0 +1,10 @@
+digraph {
+"push contracts" -> "post rest api"
+"push modcontracts" -> "post rest api"
+"push measures" -> "post rest api"
+"post rest api" -> analytics
+analytics -> "render report"
+"render report" -> "pull report"
+"pull report" -> personalization
+personalization -> deliver
+}

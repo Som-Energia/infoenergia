@@ -10,15 +10,13 @@ Enllaços interessants relacionat amb IEE-Empowering:
 
 
 El servei Infoenergia es divideix en:
-- Procés setmanal
-- API Infoenergia
-- Informe e-mail
-- Apartat Infoenergia oficina virtual
-- Reports setmanals
+- Procés automàtic setmanal
+- Reports automàtic setmanals
+- Procés manual
 
-## Procés setmanal
+## Procés automàtic setmanal
 
-El procés setmanal inclou l'actualització de les dades disponibles per BeeData, execució de l'analítica i baixa de resultats.
+El procés setmanal inclou l'actualització de les dades disponibles per BeeData
 
 ![infoenergia_pushandpull.png](./img/pushandpull.png "")
 
@@ -26,17 +24,13 @@ El procés setmanal inclou l'actualització de les dades disponibles per BeeData
 2. Pujar modificacions contractuals (SOM -> BeeData)
 3. Pujar lectures mensuals (SOM -> BeeData)
 4. Pujar lectures horàries (SOM -> BeeData)
-5. Execució analítica (BeeData)
-6. Baixar resultats (SOM <- BeeData)
-7. Guardar resultats localment (SOM)
 
 ### Descripció
 
-La gestió de la pujada i baixa es fa a través de la llibreria [amoniak](https://github.com/Som-Energia/amoniak "amoniak") que s'executa a partir de diferents workers que es poden visualitzar al gestor de tasques de RQ vinculats a la següents cues:
+La gestió de la pujada de dades es fa a través de la llibreria [amoniak](https://github.com/Som-Energia/amoniak "amoniak") que s'executa a partir de diferents workers que es poden visualitzar al gestor de tasques de RQ vinculats a la següents cues:
 
 - contracts
 - measures
-- sips_measures
 
 La llibreria [amoniak](https://github.com/Som-Energia/amoniak "amoniak") utilitza:
 
@@ -44,9 +38,13 @@ La llibreria [amoniak](https://github.com/Som-Energia/amoniak "amoniak") utilitz
 - Especificació [AMON](https://amee.github.io/AMON/ ""). Defineix el format JSON de les contingut de les peticions
 - [ERP-empowering](https://github.com/Som-Energia/erp-empowering ""). Implementa empowering a l'ERP (gestió de dades, enviament de mails, ...)
 
-Les dades vinculades als contractes i mesures estan gestionades i emmagatzemades per l'ERP (exceptuant horàries), i els resultats de l'analítica estan emmagatzemades pel MongoDB.
+Les dades vinculades als contractes i mesures estan gestionades i emmagatzemades per l'ERP (exceptuant horàries).
 
-_La gestió de la pujada de lectures horàries no es realitza a través de l'API, ni amoniak, si no que es du a terme directament a través de SFTP._
+
+Notes addicionals:
+
+- La gestió de la pujada de lectures horàries no es realitza a través de l'API, ni amoniak, si no que es du a terme directament a través de SFTP
+- La gestió de la baixa d'informes es du a terme directament a través de SFTP
 
 ### Cues
 
@@ -66,10 +64,6 @@ En ambdós casos s'actualitza l'[Etag](https://en.wikipedia.org/wiki/HTTP_ETag "
 Fa una cerca de les noves **lectures de facturació** dels comptadors vinculats als contractes actius (ERP) des de la data de la última pujada associada al comptador. S'extreu la informació vinculada a la lectura (ERP), s'exporta al format AMON i es puja a BeeData (API POST)
 
 Posteriorment s'actualitza la data d'última lectura associada al comptador.
-
-#### sips_measures
-
-Fa una cerca de contractes (ERP) amb el servei Infoenergia actiu i que disposen de dades SIPS (MongoDB) anteriors a la data d'alta del contracte. S'extreu la informació vinculada a les lectures anteriors a la data d'alta (MongoDB), s'exporta al format AMON i es puja a BeeData (API PATCH)
 
 ### Operativa
 
@@ -95,29 +89,20 @@ _00 4 * * 6 sh empowering-scripts/push/push_measures.sh_
 
 L'script afegeix una tasca a la cua **measures** descrita anteriorment
 
-La pujada de lectures des SIPS es fa setmanalment:
-
-_45 1 * * 6 sh empowering-scripts/push/push_sips_measures.sh_
-
-L'script afegeix una tasca a la cua **sips_measures** descrita anteriorment
 
 #### Pujar lectures horàries (SOM -> BeeData)
 
 La implementació està a [Empowering PUSH tg](https://github.com/Som-Energia/cchuploader ""). Permet definir el número de dies històric que es volen subministrar al BeeData utilizant la data de modificació de MongoDB de referència. El sistema extreu les dades en fitxers locals i posteriorment sincronitzac via RSYNC (SFTP) amb el servidor de BeeData.
 
-** WARNING: Pendent de validació per part de BeeData i SOM. Posteriorment caldrà afegir la tasca al crontab pq s'executi periòdicament**
 
-#### Guardar resultats localment (SOM)
+La pujada de lectures es fa setmanalment:
 
-La baixada de resultats es fa setmanalment:
+_45 3 * * 4 sh ~/src/cchuploader/cchuploader/uploader.sh_ 
 
-_00 3 * * 7 sh empowering-scripts/get_ots/get_ots.sh_
-
-L'script afegeix una tasca a la cua **empowering_results_pull*
 
 ## API Infoenergia
 
-Els resultats de l'analitica descarregats en local, aixi com també l'accés a les dades horàries i la informació personal es pot fer a través de l'API infoenergia implementa a [HEMAN REST API](https://github.com/Som-Energia/heman "")
+L'accés a les dades horàries i la informació personal es pot fer a través de l'API infoenergia implementa a [HEMAN REST API](https://github.com/Som-Energia/heman "")
 
 ![infoenergia_schema.png](./img/schema.png "")
 
@@ -130,54 +115,6 @@ L'API esta muntada sobre Flask i permet l'accés autenticat a:
 El conjunt de serveis a l'usuari final utilitzen aquesta REST API.
 
 Per poder fer consultes a aquesta hi ha la llibreria [https://github.com/Som-Energia/ramman](ramman "") que implementa el conjunt de mètodes per fer consultes a l'API.
-
-## Informe e-mail
-
-### Descripció
-
-L'enviament dels informes està implementat dins l'ERP per tal de poder aprofitar les llibreries de generació de PDFs i l'enviament de correus electrònics.
-
-El contingut dels informes està definit en una plantilla .mako vinculada a un plantilla de poweremail anomenada _Enviar report Empowering_.
-
-La plantilla .mako consulta les dades personals a l'ERP i els resultats de l'anàlisi al Heman API Infoenergia.
-
-Amb les dades i la plantilla .mako ([veure mako](https://github.com/gisce/erp/tree/developer/addons/gisce/SomEnergia/som_empowering/report "")) genera el PDF que s'enviarà amb el cos de missatge definit pel poweremail. 
-
-### Operació
-
-L'enviament dels informes es realitza "manualment" i està implementat a [Empowering-scripts](https://github.com/Som-Energia/empowering-scripts/tree/developer/send "").
-
-Com que actualment no s'estan enviant els informes a tothom, la llista de contractes amb el servei d'enviament habilitat estan al .csv del directorti _data_.
-
-L'script d'enviament que actualment s'executa manualment és _send/cli.py_.
-
-```
-python cli.py
-Usage: cli.py [OPTIONS] COMMAND [ARGS]...
-
-Options:
-  --help  Show this message and exit.
-
-Commands:
-  deliver
-  deliver_all
-```
-
-Si s'utiliza la comanda _deliver_ es pot indicar el fitxer amb els contractes als quals es vol enviar l'informe:
-
-```
-
-python cli.py deliver ../data/enabled.csv
-
-```
-
-L'enviament es farà als contractes que compleixin **totes** les condicions:
-
-- Contractes de la llista en cas de la comanda _deliver_ o tots els contractes en cas de _deliver_all_
-- Es disposi de resultats de l'analítica per tots els apartats de l'informe
-- Informe del més anterior a la última lectura disponible. NOTA: En general correspondria a now-2month per assegurar que es disposa de dades entre dos mesos naturals.
-
-Si l'informe s'envia correctament s'actualitzarà el log d'enviament de mails que és accessible des del contracte amb Empowering activat.
 
 
 ## Apartat Infoenergia oficina virtual
@@ -217,3 +154,35 @@ Mandrill
 L'informe s'executa setmanalment
 
 _00 1 * * 1 sh empowering-scripts/status/runner.sh_
+
+## Procés manual
+
+El procés manual es fa periòdicament i correspon a l'execució de la personalització i enviament d'informes 
+
+El procés té les següens etapes:
+
+1. Execució analítica (BeeData)
+2. Generació informes (BeeData)
+3. Descarregar informes (SOM <- BeeData)
+4. Personalització informes (SOM)
+
+La personalització i enviament dels informes es fa a través de la llibreria [shera](https://github.com/abadiabosch/shera)
+Notes addicionals:
+
+
+Per a l'enviament dels informes s'ha d'execuar la següent comanda
+
+```
+   shera deliver_reports
+      --contracts <month.csv> 
+      --reports <folder path> 
+      --template <mako filename path>
+      --output <folder path>
+```
+
+Les opcions d'execució són
+
+- **contracts** Fitxer proporcionat per BeeData amb la informació de l'informe a enviar
+- **reports** Directori amb els informe no-personalitzats en format .pdf
+- **template** Plantilla mako per a la personalització
+- **output** Directori on es guarden els .pdf generats dels informes
